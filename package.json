@@ -1,0 +1,36 @@
+{
+  "name": "talanama-gold-insights",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test:data-parser": "node scripts/test-tgju-parser.mjs",
+    "check": "npm run lint && npm run test:data-parser && npm run build",
+    "dev:sites": "vinext dev",
+    "build:sites": "XDG_CONFIG_HOME=/tmp/wrangler-config vinext build && node scripts/copy-hosting.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@fontsource-variable/vazirmatn": "5.2.8",
+    "lucide-react": "1.24.0",
+    "next": "16.2.10",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "recharts": "3.9.2"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.45.0",
+    "@vitejs/plugin-rsc": "0.5.27",
+    "eslint": "9.39.1",
+    "eslint-config-next": "16.2.10",
+    "react-server-dom-webpack": "19.2.7",
+    "vinext": "1.0.0-beta.1",
+    "vite": "8.1.4"
+  }
+}
