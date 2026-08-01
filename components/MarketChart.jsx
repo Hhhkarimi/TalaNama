@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import {
   Area,
   Bar,
@@ -13,6 +14,7 @@ import {
   XAxis,
   YAxis
 } from "recharts";
+import { aggregateCandles, clamp } from "@/lib/analytics";
 import { formatDate, formatFa, MARKET_META } from "@/lib/goldData";
 
 const colors = {
@@ -51,9 +53,110 @@ function CustomTooltip({ active, payload, label, market, chartMode }) {
       ) : (
         <>
           <div className="tooltip-row"><span><i style={{ background: colors.primary }} />قیمت پایانی</span><b>{formatFa(row.value, MARKET_META[market].decimals)} {MARKET_META[market].unit}</b></div>
-          {market !== "usd" && <div className="tooltip-row subtle"><span>میانگین ۲۰ روزه</span><b>{row.sma20 ? formatFa(row.sma20, MARKET_META[market].decimals) : "—"}</b></div>}
+          <div className="tooltip-row subtle"><span>میانگین ۲۰ روزه</span><b>{row.sma20 ? formatFa(row.sma20, MARKET_META[market].decimals) : "—"}</b></div>
         </>
       )}
+    </div>
+  );
+}
+
+function CandleTooltip({ candle, market, left }) {
+  if (!candle) return null;
+  const decimals = MARKET_META[market].decimals;
+  const unit = MARKET_META[market].unit;
+  return (
+    <div className="candle-tooltip" style={{ left: `${clamp(left, 12, 82)}%` }}>
+      <div className="tooltip-date">
+        {candle.count > 1 ? `${formatDate(candle.startDate)} تا ${formatDate(candle.endDate)}` : formatDate(candle.date, "long")}
+      </div>
+      <div className="tooltip-row"><span>باز</span><b>{formatFa(candle.open, decimals)} {unit}</b></div>
+      <div className="tooltip-row"><span>بیشترین</span><b>{formatFa(candle.high, decimals)} {unit}</b></div>
+      <div className="tooltip-row"><span>کمترین</span><b>{formatFa(candle.low, decimals)} {unit}</b></div>
+      <div className="tooltip-row"><span>بسته</span><b>{formatFa(candle.close, decimals)} {unit}</b></div>
+    </div>
+  );
+}
+
+function CandlestickChart({ data, market }) {
+  const candles = useMemo(() => aggregateCandles(data, 90), [data]);
+  const [hoveredIndex, setHoveredIndex] = useState(null);
+  const width = 1000;
+  const height = 350;
+  const padding = { top: 18, right: 82, bottom: 38, left: 14 };
+  const plotWidth = width - padding.left - padding.right;
+  const plotHeight = height - padding.top - padding.bottom;
+  const values = candles.flatMap((candle) => [candle.high, candle.low]);
+  const rawMin = Math.min(...values);
+  const rawMax = Math.max(...values);
+  const valuePadding = Math.max((rawMax - rawMin) * 0.08, Math.abs(rawMax) * 0.004);
+  const min = rawMin - valuePadding;
+  const max = rawMax + valuePadding;
+  const scaleY = (value) => padding.top + ((max - value) / Math.max(max - min, 1)) * plotHeight;
+  const candleStep = plotWidth / Math.max(candles.length, 1);
+  const candleWidth = clamp(candleStep * 0.58, 2, 11);
+  const gridValues = Array.from({ length: 5 }, (_, index) => max - ((max - min) * index) / 4);
+  const labelIndexes = [...new Set([0, Math.floor((candles.length - 1) / 3), Math.floor(((candles.length - 1) * 2) / 3), candles.length - 1])];
+  const hovered = hoveredIndex == null ? null : candles[hoveredIndex];
+  const hoveredLeft = hoveredIndex == null ? 50 : ((hoveredIndex + 0.5) / Math.max(candles.length, 1)) * 100;
+
+  if (!candles.length) {
+    return <div className="chart-empty">داده کافی برای نمایش کندل وجود ندارد.</div>;
+  }
+
+  const yFormatter = (value) => {
+    if (market === "iran") return `${formatFa(value / 1000000, 1)} م`;
+    if (market === "usd") return `${formatFa(value / 1000, 0)} ه`;
+    return formatFa(value, 0);
+  };
+
+  return (
+    <div className="candlestick-wrap" role="img" aria-label={`نمودار کندل بازسازی‌شده ${MARKET_META[market].label}`}>
+      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
+        {gridValues.map((value) => {
+          const y = scaleY(value);
+          return (
+            <g key={value}>
+              <line x1={padding.left} x2={width - padding.right} y1={y} y2={y} stroke={colors.grid} strokeDasharray="3 5" />
+              <text x={width - padding.right + 8} y={y + 4} fill={colors.muted} fontSize="11">{yFormatter(value)}</text>
+            </g>
+          );
+        })}
+
+        {candles.map((candle, index) => {
+          const x = padding.left + (index + 0.5) * candleStep;
+          const openY = scaleY(candle.open);
+          const closeY = scaleY(candle.close);
+          const highY = scaleY(candle.high);
+          const lowY = scaleY(candle.low);
+          const positive = candle.close >= candle.open;
+          const bodyY = Math.min(openY, closeY);
+          const bodyHeight = Math.max(Math.abs(openY - closeY), 1.5);
+          const color = positive ? colors.secondary : colors.negative;
+          return (
+            <g
+              key={`${candle.startDate}-${candle.endDate}`}
+              onMouseEnter={() => setHoveredIndex(index)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              onFocus={() => setHoveredIndex(index)}
+              onBlur={() => setHoveredIndex(null)}
+              tabIndex="0"
+            >
+              <title>{`${formatDate(candle.date, "long")}: باز ${formatFa(candle.open)}, بیشترین ${formatFa(candle.high)}, کمترین ${formatFa(candle.low)}, بسته ${formatFa(candle.close)}`}</title>
+              <line x1={x} x2={x} y1={highY} y2={lowY} stroke={color} strokeWidth="1.4" />
+              <rect x={x - candleWidth / 2} y={bodyY} width={candleWidth} height={bodyHeight} rx="1.2" fill={positive ? "var(--surface)" : color} stroke={color} strokeWidth="1.4" />
+              <rect x={x - candleStep / 2} y={padding.top} width={candleStep} height={plotHeight} fill="transparent" />
+            </g>
+          );
+        })}
+
+        {labelIndexes.map((index) => {
+          const candle = candles[index];
+          if (!candle) return null;
+          const x = padding.left + (index + 0.5) * candleStep;
+          return <text key={index} x={x} y={height - 10} textAnchor="middle" fill={colors.muted} fontSize="11">{formatDate(candle.date)}</text>;
+        })}
+      </svg>
+      <CandleTooltip candle={hovered} market={market} left={hoveredLeft} />
     </div>
   );
 }
@@ -61,13 +164,26 @@ function CustomTooltip({ active, payload, label, market, chartMode }) {
 export default function MarketChart({ data, market, chartMode, indicators }) {
   const meta = MARKET_META[market];
   const isCompare = market === "compare" || chartMode === "compare";
+
+  if (chartMode === "candles" && market !== "compare") {
+    return (
+      <>
+        <CandlestickChart data={data} market={market} />
+        <div className="chart-integrity-note" role="note">
+          کندل‌ها از سری تاریخی بازسازی‌شده تولید شده‌اند؛ باز، بیشترین، کمترین و بسته‌شدن رسمی بازار نیستند.
+        </div>
+      </>
+    );
+  }
+
   const values = isCompare
     ? data.flatMap((item) => [item.globalIndex, item.iranIndex, item.usdIndex])
     : chartMode === "returns"
       ? data.map((item) => item.dailyReturn)
       : data.map((item) => item.value);
-  const min = Math.min(...values.filter(Number.isFinite));
-  const max = Math.max(...values.filter(Number.isFinite));
+  const finiteValues = values.filter(Number.isFinite);
+  const min = Math.min(...finiteValues);
+  const max = Math.max(...finiteValues);
   const padding = Math.max((max - min) * 0.12, Math.abs(max) * 0.015);
   const domain = chartMode === "returns" ? [Math.min(min - padding, -1), Math.max(max + padding, 1)] : [min - padding, max + padding];
 
