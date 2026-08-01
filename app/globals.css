@@ -32,7 +32,7 @@ html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
-  font-family: "Vazirmatn Variable", Vazirmatn, Tahoma, sans-serif;
+  font-family: "Vazirmatn Variable", Vazirmatn;
   background: var(--bg);
   color: var(--text);
   font-feature-settings: "ss01";
