@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   ArrowUpLeft,
   BarChart3,
-  Bell,
   BookOpen,
   Calculator,
   Check,
@@ -21,17 +20,18 @@ import {
   Moon,
   RefreshCw,
   Settings2,
-  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
   Sun,
-  TrendingUp,
   WalletCards,
   X
 } from "lucide-react";
 import MarketChart from "@/components/MarketChart";
 import DriversChart from "@/components/DriversChart";
+import AdvancedAnalysis from "@/components/AdvancedAnalysis";
+import PriceAlert from "@/components/PriceAlert";
 import { applyMarketSnapshot, calculateStats, formatFa, generateMarketData, MARKET_META } from "@/lib/goldData";
+import { buildMarketAnalysis } from "@/lib/analytics";
 
 const baseData = generateMarketData();
 const HOUR_MS = 60 * 60 * 1000;
@@ -123,7 +123,6 @@ export default function GoldDashboard() {
   const [period, setPeriod] = useState("6M");
   const [chartMode, setChartMode] = useState("area");
   const [indicators, setIndicators] = useState(["sma20"]);
-  const [analysisTab, setAnalysisTab] = useState("technical");
   const [scenarioGold, setScenarioGold] = useState(5);
   const [scenarioUsd, setScenarioUsd] = useState(10);
   const [scenarioPremium, setScenarioPremium] = useState(0);
@@ -181,6 +180,10 @@ export default function GoldDashboard() {
       return {
         ...row,
         value: row[key],
+        open: row[`${key}Open`] ?? previous,
+        high: row[`${key}High`] ?? Math.max(previous, row[key]),
+        low: row[`${key}Low`] ?? Math.min(previous, row[key]),
+        close: row[key],
         sma20: row[`${key}Sma20`],
         sma50: row[`${key}Sma50`],
         upper: row[`${key}Upper`],
@@ -198,12 +201,8 @@ export default function GoldDashboard() {
   const globalStats = calculateStats(filtered, "global");
   const iranStats = calculateStats(filtered, "iran");
   const usdStats = calculateStats(filtered, "usd");
-  const pricingResidual = iranStats.change - globalStats.change - usdStats.change;
-  const drivers = [
-    { name: "اونس جهانی", value: globalStats.change },
-    { name: "نرخ دلار", value: usdStats.change },
-    { name: "صرف داخلی", value: pricingResidual }
-  ];
+  const analysis = useMemo(() => buildMarketAnalysis(filtered, key), [filtered, key]);
+  const drivers = analysis.driverItems;
 
   const projectedGlobal = current.global * (1 + scenarioGold / 100);
   const projectedUsd = current.usd * (1 + scenarioUsd / 100);
@@ -214,8 +213,6 @@ export default function GoldDashboard() {
   const investReturn = ((investSlice.at(-1).iran / investSlice[0].iran) - 1) * 100;
   const investResult = investment * (1 + investReturn / 100);
 
-  const aboveSma = current[key] > (current[`${key}Sma20`] || current[key]);
-  const trendScore = Math.max(18, Math.min(88, Math.round(50 + stats.change * 1.15 - stats.volatility * 0.22)));
   const updateTime = formatUpdateTime(syncState.updatedAt || marketSnapshot?.updatedAt);
   const updateText = syncState.status === "live"
     ? `آخرین داده: ${updateTime}`
@@ -233,8 +230,22 @@ export default function GoldDashboard() {
   };
 
   const exportCsv = () => {
-    const rows = ["date,global_usd_oz,iran_18k_toman,usd_toman,premium_percent", ...filtered.map((row) => [row.date, row.global.toFixed(2), Math.round(row.iran), Math.round(row.usd), row.premium.toFixed(2)].join(","))];
-    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8" });
+    const header = "date,global_usd_oz,iran_18k_toman,usd_toman,premium_percent,selected_market,open,high,low,close,history_quality,source_status";
+    const rows = [header, ...filtered.map((row) => [
+      row.date,
+      row.global.toFixed(2),
+      Math.round(row.iran),
+      Math.round(row.usd),
+      row.premium.toFixed(2),
+      key,
+      Number(row.open).toFixed(MARKET_META[key].decimals),
+      Number(row.high).toFixed(MARKET_META[key].decimals),
+      Number(row.low).toFixed(MARKET_META[key].decimals),
+      Number(row.close).toFixed(MARKET_META[key].decimals),
+      row.historyQuality || "reconstructed",
+      syncState.status
+    ].join(","))];
+    const blob = new Blob(["\uFEFF", rows.join("\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -268,11 +279,11 @@ export default function GoldDashboard() {
           <NavItem icon={Calculator} href="#calculator" onClick={scrollTo("calculator")}>محاسبه‌گر بازده</NavItem>
           <NavItem icon={BookOpen} href="#sources" onClick={scrollTo("sources")}>منابع و روش</NavItem>
         </nav>
-        <div className="sidebar-watch">
-          <div className="watch-icon"><Bell size={17} /></div>
-          <div><b>هشدار قیمت</b><small>برای طلای ۱۸ عیار</small></div>
-          <button className="switch" aria-label="فعال‌سازی هشدار"><span /></button>
-        </div>
+        <PriceAlert
+          currentPrice={current.iran}
+          updatedAt={syncState.updatedAt || marketSnapshot?.updatedAt}
+          sourceStatus={syncState.status}
+        />
         <div className="sidebar-foot">
           <div className={cn("status-dot", !sourceIsHealthy && "stale")} />
           <div><b>داده‌های بازار</b><small>{sourceIsHealthy ? "به‌روزرسانی ساعتی فعال" : "حالت پشتیبان فعال"}</small></div>
@@ -333,7 +344,15 @@ export default function GoldDashboard() {
               </div>
               <div className="chart-head-actions">
                 <div className="select-wrap">
-                  <select value={market} onChange={(event) => setMarket(event.target.value)} aria-label="انتخاب بازار">
+                  <select
+                    value={market}
+                    onChange={(event) => {
+                      const nextMarket = event.target.value;
+                      setMarket(nextMarket);
+                      if (nextMarket === "compare" && chartMode === "candles") setChartMode("compare");
+                    }}
+                    aria-label="انتخاب بازار"
+                  >
                     <option value="iran">طلای ۱۸ عیار</option>
                     <option value="global">اونس جهانی</option>
                     <option value="usd">دلار آزاد</option>
@@ -347,8 +366,16 @@ export default function GoldDashboard() {
 
             <div className="chart-toolbar">
               <div className="segmented chart-types" aria-label="نوع نمودار">
-                {[{ id: "area", label: "ناحیه‌ای" }, { id: "line", label: "خطی" }, { id: "returns", label: "بازده روزانه" }, { id: "compare", label: "مقایسه" }].map((item) => (
-                  <button key={item.id} className={chartMode === item.id ? "active" : ""} onClick={() => setChartMode(item.id)}>{item.label}</button>
+                {[{ id: "area", label: "ناحیه‌ای" }, { id: "line", label: "خطی" }, { id: "candles", label: "کندل" }, { id: "returns", label: "بازده روزانه" }, { id: "compare", label: "مقایسه" }].map((item) => (
+                  <button
+                    key={item.id}
+                    className={chartMode === item.id ? "active" : ""}
+                    onClick={() => setChartMode(item.id)}
+                    disabled={item.id === "candles" && market === "compare"}
+                    title={item.id === "candles" && market === "compare" ? "کندل برای حالت مقایسه در دسترس نیست" : undefined}
+                  >
+                    {item.label}
+                  </button>
                 ))}
               </div>
               <div className="segmented periods" aria-label="بازه زمانی">
@@ -380,41 +407,13 @@ export default function GoldDashboard() {
           </section>
 
           <div className="two-column" id="analysis">
-            <section className="panel analysis-panel">
-              <div className="panel-head compact-head">
-                <div><div className="panel-kicker"><Sparkles size={16} /> تحلیل انتخابی</div><h2>برداشت از داده‌ها</h2></div>
-                <div className="score-ring" style={{ "--score": `${trendScore * 3.6}deg` }}><span>{formatFa(trendScore)}</span><small>قدرت روند</small></div>
-              </div>
-              <div className="analysis-tabs">
-                <button className={analysisTab === "technical" ? "active" : ""} onClick={() => setAnalysisTab("technical")}>تکنیکال</button>
-                <button className={analysisTab === "drivers" ? "active" : ""} onClick={() => setAnalysisTab("drivers")}>محرک‌ها</button>
-                <button className={analysisTab === "risk" ? "active" : ""} onClick={() => setAnalysisTab("risk")}>ریسک</button>
-              </div>
-              {analysisTab === "technical" && (
-                <div className="analysis-body">
-                  <div className={cn("signal-badge", aboveSma ? "bullish" : "bearish")}><TrendingUp size={15} /> {aboveSma ? "سیگنال کوتاه‌مدت مثبت" : "فشار فروش کوتاه‌مدت"}</div>
-                  <p>قیمت {MARKET_META[key].label} در بازه {periodLabels[period]} <b>{percent(stats.change, 1)}</b> تغییر کرده و اکنون {aboveSma ? "بالاتر" : "پایین‌تر"} از میانگین متحرک ۲۰ روزه قرار دارد.</p>
-                  <ul className="insight-list">
-                    <li><span>روند غالب</span><b>{stats.change > 5 ? "صعودی" : stats.change < -5 ? "نزولی" : "خنثی"}</b></li>
-                    <li><span>فاصله از میانگین</span><b>{percent(((stats.current / stats.average) - 1) * 100, 1)}</b></li>
-                    <li><span>سطح نوسان</span><b>{stats.volatility > 40 ? "بالا" : stats.volatility > 22 ? "متوسط" : "پایین"}</b></li>
-                  </ul>
-                </div>
-              )}
-              {analysisTab === "drivers" && (
-                <div className="analysis-body">
-                  <p>در دوره انتخابی، دلار با اثر <b>{percent(usdStats.change, 1)}</b> مهم‌ترین محرک قابل‌اندازه‌گیری قیمت داخلی بوده است.</p>
-                  <DriversChart items={drivers} />
-                </div>
-              )}
-              {analysisTab === "risk" && (
-                <div className="analysis-body">
-                  <div className="risk-meter"><span style={{ width: `${Math.min(stats.volatility, 70) / 0.7}%` }} /></div>
-                  <p>نوسان سالانه‌شده این بازه <b>{formatFa(stats.volatility, 1)}٪</b> است. دامنه قیمت از کف تا سقف دوره <b>{percent(((stats.high / stats.low) - 1) * 100, 1)}</b> بوده است.</p>
-                  <div className="risk-note"><ShieldCheck size={18} /><span>برای تصمیم‌های کوتاه‌مدت، سناریوی دلار و اونس را جداگانه بررسی کنید.</span></div>
-                </div>
-              )}
-            </section>
+            <AdvancedAnalysis
+              analysis={analysis}
+              marketKey={key}
+              marketLabel={MARKET_META[key].label}
+              periodLabel={periodLabels[period]}
+              sourceStatus={syncState.status}
+            />
 
             <section className="panel drivers-panel">
               <div className="panel-head compact-head">
@@ -425,7 +424,7 @@ export default function GoldDashboard() {
               <div className="driver-summary">
                 <div><span>بازده طلای ایران</span><strong className={iranStats.change >= 0 ? "positive" : "negative"}>{percent(iranStats.change, 1)}</strong></div>
                 <ArrowLeft size={18} />
-                <p>{Math.abs(usdStats.change) > Math.abs(globalStats.change) ? "اثر نرخ ارز در این دوره از جهت حرکت اونس قوی‌تر بوده است." : "جهت حرکت اونس، نقش پررنگ‌تری از نرخ ارز داشته است."}</p>
+                <p>{Math.abs(analysis.correlations.usd) > Math.abs(analysis.correlations.global) ? "هم‌حرکتی روزانه با نرخ ارز در این دوره بیشتر از اونس بوده است." : "هم‌حرکتی روزانه با اونس در این دوره بیشتر یا هم‌اندازه نرخ ارز بوده است."}</p>
               </div>
             </section>
           </div>

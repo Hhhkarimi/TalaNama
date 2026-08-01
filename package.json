@@ -9,9 +9,12 @@
     "start": "next start",
     "lint": "eslint .",
     "test:data-parser": "node scripts/test-tgju-parser.mjs",
-    "check": "npm run lint && npm run test:data-parser && npm run build",
+    "check": "npm run lint && npm run test:data-parser && npm run test:analytics && npm run test:price-alert && npm run test:fonts && npm run build",
     "dev:sites": "vinext dev",
-    "build:sites": "XDG_CONFIG_HOME=/tmp/wrangler-config vinext build && node scripts/copy-hosting.mjs"
+    "build:sites": "XDG_CONFIG_HOME=/tmp/wrangler-config vinext build && node scripts/copy-hosting.mjs",
+    "test:analytics": "node scripts/test-analytics.mjs",
+    "test:price-alert": "node scripts/test-price-alert.mjs",
+    "test:fonts": "bash scripts/verify-vazirmatn-only.sh"
   },
   "engines": {
     "node": ">=22"

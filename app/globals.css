@@ -338,3 +338,419 @@ a { color: inherit; text-decoration: none; }
   .insight-list li { border-left: 0; border-bottom: 1px solid var(--line); }
   .insight-list li:last-child { border-bottom: 0; }
 }
+
+/* BEGIN TALANAMA MAJOR ANALYTICS */
+/* TalaNama major analytical upgrade — additive styles, preserving existing tokens */
+.segmented button:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+
+.candlestick-wrap {
+  position: relative;
+  height: 330px;
+  margin-top: 8px;
+  direction: ltr;
+  overflow: hidden;
+}
+
+.candlestick-wrap svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.candlestick-wrap g[tabindex="0"]:focus-visible rect:not([fill="transparent"]) {
+  stroke-width: 3;
+}
+
+.candle-tooltip {
+  position: absolute;
+  top: 14px;
+  transform: translateX(-50%);
+  min-width: 190px;
+  z-index: 2;
+  background: color-mix(in srgb, var(--surface) 97%, transparent);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 11px;
+  box-shadow: 0 10px 28px rgba(36,31,23,.12);
+  direction: rtl;
+  pointer-events: none;
+}
+
+.chart-integrity-note {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  margin: 2px 0 9px;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--gold) 28%, var(--line));
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--gold-soft) 58%, var(--surface));
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.8;
+}
+
+.chart-empty {
+  height: 330px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.analysis-period-copy {
+  margin-top: 4px !important;
+}
+
+.analysis-summary-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 13px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.descriptive-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.analysis-tabs {
+  gap: 14px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.analysis-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+
+.analysis-tabs button:focus-visible,
+.price-alert-summary:focus-visible,
+.switch:focus-visible,
+.price-alert-settings input:focus-visible,
+.price-alert-settings select:focus-visible {
+  outline: 2px solid #d5ac55;
+  outline-offset: 2px;
+}
+
+.analysis-body {
+  padding-top: 15px;
+}
+
+.analysis-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.analysis-metric {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  display: grid;
+  gap: 3px;
+}
+
+.analysis-metric > span {
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.7;
+}
+
+.analysis-metric > strong {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.analysis-metric > small {
+  color: var(--muted-2);
+  font-size: 7.5px;
+  line-height: 1.7;
+}
+
+.analysis-metric.warn {
+  border-color: color-mix(in srgb, var(--gold) 45%, var(--line));
+  background: color-mix(in srgb, var(--gold-soft) 52%, var(--surface));
+}
+
+.analysis-metric.positive strong { color: var(--teal); }
+.analysis-metric.negative strong { color: var(--red); }
+
+.analysis-insight-cards {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.analysis-insight-cards article {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  align-items: start;
+  gap: 8px;
+  padding: 8px 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+
+.analysis-insight-cards article > span {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--gold-soft);
+  color: var(--gold-dark);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.analysis-insight-cards p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.9;
+}
+
+.analysis-method-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 11px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: var(--blue-soft);
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.9;
+}
+
+.analysis-method-note svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--blue);
+}
+
+.quality-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.quality-grid article {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.quality-grid article > svg {
+  color: var(--gold-dark);
+  flex: 0 0 auto;
+}
+
+.quality-grid article > div {
+  display: grid;
+  gap: 2px;
+}
+
+.quality-grid b {
+  font-size: 10px;
+}
+
+.quality-grid span {
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.8;
+}
+
+.price-alert-widget {
+  display: block;
+  padding: 10px;
+}
+
+.price-alert-row {
+  display: grid;
+  grid-template-columns: 31px minmax(0, 1fr) 30px;
+  gap: 8px;
+  align-items: center;
+}
+
+.price-alert-summary {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  min-width: 0;
+  text-align: right;
+  cursor: pointer;
+}
+
+.price-alert-summary > span {
+  min-width: 0;
+  display: grid;
+}
+
+.price-alert-summary b {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.price-alert-summary small {
+  color: var(--sidebar-muted);
+  font-size: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.price-alert-summary svg {
+  color: var(--sidebar-muted);
+  transition: transform .18s ease;
+  flex: 0 0 auto;
+}
+
+.price-alert-summary svg.expanded {
+  transform: rotate(180deg);
+}
+
+.switch {
+  transition: background .18s ease;
+}
+
+.switch span {
+  transition: transform .18s ease, background .18s ease;
+}
+
+.switch.active {
+  background: #8f6b28;
+}
+
+.switch.active span {
+  transform: translateX(12px);
+  background: #f2d58f;
+}
+
+.price-alert-settings {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #353229;
+}
+
+.price-alert-settings label {
+  display: grid;
+  gap: 4px;
+}
+
+.price-alert-settings label > span {
+  color: var(--sidebar-muted);
+  font-size: 8px;
+}
+
+.price-alert-settings input,
+.price-alert-settings select {
+  width: 100%;
+  height: 31px;
+  border: 1px solid #403d34;
+  border-radius: 7px;
+  padding: 0 8px;
+  background: #1d1c17;
+  color: var(--sidebar-text);
+  outline: none;
+  font-size: 9px;
+}
+
+.price-alert-settings > small {
+  color: #aaa69b;
+  font-size: 7.5px;
+  line-height: 1.8;
+}
+
+.price-alert-settings > small.warning {
+  color: #d9b76d;
+}
+
+.alert-loading {
+  grid-template-columns: 31px 1fr;
+}
+
+@media (max-width: 1180px) {
+  .analysis-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .analysis-summary-strip {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .analysis-metric-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .candlestick-wrap {
+    height: 290px;
+  }
+
+  .candle-tooltip {
+    min-width: 170px;
+    top: 8px;
+  }
+}
+
+@media (max-width: 460px) {
+  .analysis-metric-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .price-alert-summary svg,
+  .switch,
+  .switch span {
+    transition: none;
+  }
+}
+
+.analysis-context-note {
+  margin-bottom: 9px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.8;
+}
+/* END TALANAMA MAJOR ANALYTICS */
